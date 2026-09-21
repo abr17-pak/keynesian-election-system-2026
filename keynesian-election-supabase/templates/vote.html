@@ -1,0 +1,40 @@
+{% extends "base_public.html" %}
+{% block title %}Cast Your Vote{% endblock %}
+{% block card_size %}wide{% endblock %}
+{% block public_content %}
+
+<div class="public-brand">
+    <img src="{{ url_for('static', filename='images/logo.png.jpeg') }}" class="logo-img" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+    <div class="mark" style="display:none;">KI</div>
+    <div>
+        <h2>Keynesian Institute</h2>
+        <p>Digital Election System</p>
+    </div>
+</div>
+
+<p class="eyebrow">Official ballot</p>
+<h1>School Elections</h1>
+<p class="lead">Select one candidate per position, then submit your vote. You can only vote once.</p>
+
+<form method="POST">
+
+    {% for position in positions %}
+    <div class="ballot-position">
+
+        <h2>{{ position.name }}</h2>
+
+        {% for candidate in position.candidates %}
+        <label class="ballot-option" for="c-{{ candidate.id }}">
+            <input type="radio" id="c-{{ candidate.id }}" name="{{ position.id }}" value="{{ candidate.id }}" required>
+            <span>{{ candidate.name }}</span>
+        </label>
+        {% endfor %}
+
+    </div>
+    {% endfor %}
+
+    <button type="submit">Submit Vote</button>
+
+</form>
+
+{% endblock %}

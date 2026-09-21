@@ -1,0 +1,22 @@
+{% extends "base_public.html" %}
+{% block title %}Election Setup{% endblock %}
+{% block public_content %}
+
+<div class="public-brand">
+    <img src="{{ url_for('static', filename='images/logo.png.jpeg') }}" class="logo-img" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+    <div class="mark" style="display:none;">KI</div>
+    <div>
+        <h2>Keynesian Institute</h2>
+        <p>Digital Election System</p>
+    </div>
+</div>
+
+<p class="eyebrow">Setup</p>
+<h1>Election Setup</h1>
+<p class="lead">Positions are currently added directly from Python. An admin interface for this is coming later.</p>
+
+<div class="public-links">
+    <a href="/admin">🛡 Go to Admin Login</a>
+</div>
+
+{% endblock %}

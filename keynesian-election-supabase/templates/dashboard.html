@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="topbar">
+    <div>
+        <p class="eyebrow">Overview</p>
+        <h1>Election Dashboard</h1>
+        <p class="sub">Welcome back — here's how the election is tracking today.</p>
+    </div>
+    <div class="live-pill"><span class="live-dot"></span>Live · Polls open</div>
+</div>
+
+<div class="stats">
+
+    <div class="stat">
+        <div class="stat-top">
+            <div class="stat-icon i-blue"><i data-lucide="users"></i></div>
+        </div>
+        <h1>{{ student_count }}</h1>
+        <p>Total Students</p>
+    </div>
+
+    <div class="stat">
+        <div class="stat-top">
+            <div class="stat-icon i-green"><i data-lucide="vote"></i></div>
+        </div>
+        <h1>{{ candidate_count }}</h1>
+        <p>Candidates</p>
+    </div>
+
+    <div class="stat">
+        <div class="stat-top">
+            <div class="stat-icon i-amber"><i data-lucide="trophy"></i></div>
+        </div>
+        <h1>{{ position_count }}</h1>
+        <p>Positions</p>
+    </div>
+
+    <div class="stat">
+        <div class="stat-top">
+            <div class="stat-icon i-violet"><i data-lucide="check-check"></i></div>
+        </div>
+        <h1>{{ voted_count }}</h1>
+        <p>Votes Cast</p>
+    </div>
+
+</div>
+
+<p class="section-label">Manage</p>
+
+<div class="dashboard-grid">
+
+    <a href="{{ url_for('students') }}" class="dashboard-card">
+        <div class="dc-icon"><i data-lucide="users"></i></div>
+        <h2>Students</h2>
+        <p>Add, delete and manage students.</p>
+    </a>
+
+    <a href="{{ url_for('positions') }}" class="dashboard-card">
+        <div class="dc-icon"><i data-lucide="trophy"></i></div>
+        <h2>Positions</h2>
+        <p>Create election positions.</p>
+    </a>
+
+    <a href="{{ url_for('candidates') }}" class="dashboard-card">
+        <div class="dc-icon"><i data-lucide="vote"></i></div>
+        <h2>Candidates</h2>
+        <p>Register election candidates.</p>
+    </a>
+
+    <a href="{{ url_for('results') }}" class="dashboard-card">
+        <div class="dc-icon"><i data-lucide="bar-chart-3"></i></div>
+        <h2>Live Results</h2>
+        <p>View election results in real time.</p>
+    </a>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Results{% endblock %}
+{% block content %}
+
+<div class="topbar">
+    <div>
+        <p class="eyebrow">Live</p>
+        <h1>Election Results</h1>
+        <p class="sub">Updates automatically as votes are cast.</p>
+    </div>
+    <form action="{{ url_for('reset_election') }}" method="POST" onsubmit="return confirm('Reset all votes and allow every student to vote again?');">
+        <button type="submit" class="btn-danger">Reset Election</button>
+    </form>
+</div>
+
+<div class="stats" style="grid-template-columns: 1fr; margin-bottom: 22px;">
+    <div class="stat">
+        <div class="stat-top">
+            <div class="stat-icon i-violet"><i data-lucide="check-check"></i></div>
+        </div>
+        <h1>{{ total_votes }}</h1>
+        <p>Total Votes Cast</p>
+    </div>
+</div>
+
+{% for position in positions %}
+<div class="card">
+
+    <h2>{{ position.name }}</h2>
+
+    {% if position.candidates %}
+
+        <div class="leader-line">
+            🏆 <strong>Current Leader:</strong>
+            {% if leaders[position.id] %}
+                {{ leaders[position.id].name }}
+            {% else %}
+                No Leader Yet
+            {% endif %}
+        </div>
+
+        {% set max_votes = (position.candidates | map(attribute='votes') | max) or 1 %}
+
+        {% for candidate in position.candidates %}
+        <div class="result-bar-row">
+            <div class="r-top">
+                <span class="r-name">{{ candidate.name }}</span>
+                <span class="r-votes">{{ candidate.votes }} votes</span>
+            </div>
+            <div class="result-bar-track">
+                <div class="result-bar-fill" style="width: {{ (candidate.votes / max_votes * 100) if max_votes else 0 }}%;"></div>
+            </div>
+        </div>
+        {% endfor %}
+
+    {% else %}
+        <p style="color:var(--ink-400); font-size:13.5px;">No candidates have been added for this position yet.</p>
+    {% endif %}
+
+</div>
+{% endfor %}
+
+{% endblock %}

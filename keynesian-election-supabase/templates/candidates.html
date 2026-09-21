@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Candidates{% endblock %}
+{% block content %}
+
+<div class="topbar">
+    <div>
+        <p class="eyebrow">Election setup</p>
+        <h1>Candidates</h1>
+        <p class="sub">Register students running for each position.</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Add Candidate</h2>
+
+    <form method="POST" class="form-inline" style="margin-top:14px;">
+
+        <div class="form-row" style="margin-bottom:0;">
+            <label>Name</label>
+            <input type="text" name="name" required>
+        </div>
+
+        <div class="form-row" style="margin-bottom:0;">
+            <label>Position</label>
+            <select name="position">
+                {% for position in positions %}
+                <option value="{{ position.id }}">{{ position.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit">Add Candidate</button>
+
+    </form>
+</div>
+
+<div class="card" style="padding-top:20px;">
+    <h2 style="margin-bottom:14px;">All Candidates <span style="color:var(--ink-400); font-weight:500; font-family:var(--font-mono); font-size:13px;">({{ candidates|length }})</span></h2>
+
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>Position</th>
+                <th>Votes</th>
+                <th>Action</th>
+            </tr>
+
+            {% for candidate in candidates %}
+            <tr>
+                <td style="font-weight:600; color:var(--ink-900);">{{ candidate.name }}</td>
+                <td>{{ candidate.position.name }}</td>
+                <td style="font-family:var(--font-mono); color:var(--blue-600); font-weight:600;">{{ candidate.votes }}</td>
+                <td>
+                    <form action="{{ url_for('delete_candidate', id=candidate.id) }}" method="POST" onsubmit="return confirm('Delete this candidate?');">
+                        <button type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" style="text-align:center; color:var(--ink-400); padding:26px;">No candidates registered yet.</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+{% endblock %}

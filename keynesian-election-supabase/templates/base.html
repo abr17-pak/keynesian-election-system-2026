@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %} · Keynesian Institute</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<div class="layout">
+
+    <aside class="sidebar">
+
+        <div class="brand">
+            <img src="{{ url_for('static', filename='images/logo.png.jpeg') }}" class="logo-img" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="mark" style="display:none;">KI</div>
+            <div class="brand-text">
+                <h2>Keynesian Institute</h2>
+                <p>Digital Election System</p>
+            </div>
+        </div>
+
+        <p class="nav-label">Administration</p>
+
+        <nav>
+            <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' else '' }}">
+                <span class="bubble"></span>
+                <i data-lucide="layout-dashboard" class="icon"></i>
+                Dashboard
+            </a>
+
+            <a href="{{ url_for('students') }}" class="{{ 'active' if request.endpoint == 'students' else '' }}">
+                <span class="bubble"></span>
+                <i data-lucide="users" class="icon"></i>
+                Students
+            </a>
+
+            <a href="{{ url_for('positions') }}" class="{{ 'active' if request.endpoint == 'positions' else '' }}">
+                <span class="bubble"></span>
+                <i data-lucide="trophy" class="icon"></i>
+                Positions
+            </a>
+
+            <a href="{{ url_for('candidates') }}" class="{{ 'active' if request.endpoint == 'candidates' else '' }}">
+                <span class="bubble"></span>
+                <i data-lucide="vote" class="icon"></i>
+                Candidates
+            </a>
+
+            <a href="{{ url_for('results') }}" class="{{ 'active' if request.endpoint == 'results' else '' }}">
+                <span class="bubble"></span>
+                <i data-lucide="bar-chart-3" class="icon"></i>
+                Results
+            </a>
+        </nav>
+
+        <div class="sidebar-foot">
+            Signed in as Administrator
+            <br>© Keynesian Institute Of Management And Sciences
+        </div>
+
+    </aside>
+
+    <main class="content">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+</div>
+
+<script>lucide.createIcons();</script>
+
+</body>
+</html>

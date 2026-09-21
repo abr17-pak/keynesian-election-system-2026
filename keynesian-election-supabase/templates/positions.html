@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Positions{% endblock %}
+{% block content %}
+
+<div class="topbar">
+    <div>
+        <p class="eyebrow">Election setup</p>
+        <h1>Positions</h1>
+        <p class="sub">Create the roles students will run for.</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2>Add Position</h2>
+
+    <form method="POST" class="form-inline" style="margin-top:14px;">
+        <div class="form-row" style="margin-bottom:0;">
+            <input type="text" name="position_name" placeholder="e.g. Head Boy" required>
+        </div>
+        <button type="submit">Add Position</button>
+    </form>
+</div>
+
+<div class="card" style="padding-top:20px;">
+    <h2 style="margin-bottom:14px;">All Positions <span style="color:var(--ink-400); font-weight:500; font-family:var(--font-mono); font-size:13px;">({{ positions|length }})</span></h2>
+
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Position</th>
+                <th>Action</th>
+            </tr>
+
+            {% for position in positions %}
+            <tr>
+                <td style="font-family:var(--font-mono); color:var(--ink-400);">{{ "%03d"|format(position.id) }}</td>
+                <td style="font-weight:600; color:var(--ink-900);">{{ position.name }}</td>
+                <td>
+                    <form action="{{ url_for('delete_position', id=position.id) }}" method="POST" onsubmit="return confirm('Delete this position and all its candidates?');">
+                        <button type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="3" style="text-align:center; color:var(--ink-400); padding:26px;">No positions created yet.</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+{% endblock %}
