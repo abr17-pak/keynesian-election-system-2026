@@ -181,13 +181,17 @@ def candidates():
 
 
 @app.route("/positions", methods=["GET", "POST"])
-def positions():
-
-    if request.method == "POST":
+ if request.method == "POST":
 
         position_name = request.form["position_name"]
 
-        position = Position(name=position_name)
+        try:
+            max_selections = int(request.form.get("max_selections", 1))
+        except ValueError:
+            max_selections = 1
+        max_selections = max(1, max_selections)
+
+        position = Position(name=position_name, max_selections=max_selections)
 
         db.session.add(position)
         db.session.commit()
@@ -200,7 +204,6 @@ def positions():
         "positions.html",
         positions=all_positions
     )
-
 @app.route("/delete_position/<int:id>", methods=["POST"])
 def delete_position(id):
 
@@ -313,18 +316,30 @@ def login():
 @app.route("/vote", methods=["GET", "POST"])
 def vote():
 
+       positions = Position.query.all()
+
     if request.method == "POST":
 
-        selected_candidates = request.form
+        for position in positions:
 
-        for position_id, candidate_id in selected_candidates.items():
+            candidate_ids = request.form.getlist(str(position.id))
 
-            candidate = Candidate.query.get(int(candidate_id))
+            if len(candidate_ids) == 0:
+                return f"Please select at least one candidate for {position.name}."
 
-            if candidate:
-                candidate.votes += 1
-                student = Student.query.get(session["student_id"])
-                student.has_voted = True
+            if len(candidate_ids) > position.max_selections:
+                return (
+                    f"You selected too many candidates for {position.name}. "
+                    f"You may choose up to {position.max_selections}."
+                )
+
+            for candidate_id in candidate_ids:
+                candidate = Candidate.query.get(int(candidate_id))
+                if candidate and candidate.position_id == position.id:
+                    candidate.votes += 1
+
+        student = Student.query.get(session["student_id"])
+        student.has_voted = True
 
         db.session.commit()
 
