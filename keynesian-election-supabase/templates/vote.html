@@ -21,6 +21,7 @@
     {% for position in positions %}
     <div class="ballot-position" {% if position.max_selections > 1 %}data-max="{{ position.max_selections }}"{% endif %}>
 
+          <h2>{{ position.name }}</h2>
         <h2>
             {{ position.name }}
             {% if position.max_selections > 1 %}
