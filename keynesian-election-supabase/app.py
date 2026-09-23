@@ -187,6 +187,8 @@ def positions():
 
         position_name = request.form["position_name"]
 
+        # "Max selections" defaults to 1 (normal single-choice position)
+        # if the field is left blank or isn't a valid number.
         try:
             max_selections = int(request.form.get("max_selections", 1))
         except ValueError:
@@ -207,6 +209,22 @@ def positions():
         positions=all_positions
     )
 
+
+@app.route("/update_position/<int:id>", methods=["POST"])
+def update_position(id):
+
+    position = Position.query.get_or_404(id)
+
+    try:
+        max_selections = int(request.form.get("max_selections", 1))
+    except ValueError:
+        max_selections = 1
+
+    position.max_selections = max(1, max_selections)
+
+    db.session.commit()
+
+    return redirect(url_for("positions"))
 
 @app.route("/delete_position/<int:id>", methods=["POST"])
 def delete_position(id):
@@ -320,10 +338,12 @@ def login():
 @app.route("/vote", methods=["GET", "POST"])
 def vote():
 
-       positions = Position.query.all()
+    positions = Position.query.all()
 
     if request.method == "POST":
 
+        # For each position, read every checked candidate (getlist handles
+        # both a single radio value and multiple checkbox values).
         for position in positions:
 
             candidate_ids = request.form.getlist(str(position.id))
@@ -348,8 +368,6 @@ def vote():
         db.session.commit()
 
         return redirect(url_for("success"))
-
-    positions = Position.query.all()
 
     return render_template(
         "vote.html",
@@ -414,7 +432,6 @@ def success():
 # -----------------------------
 # Run the App
 # -----------------------------
-@app.route("/test")
 @app.route("/test")
 def test():
     student = Student(
