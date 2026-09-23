@@ -181,7 +181,9 @@ def candidates():
 
 
 @app.route("/positions", methods=["GET", "POST"])
- if request.method == "POST":
+def positions():
+
+    if request.method == "POST":
 
         position_name = request.form["position_name"]
 
