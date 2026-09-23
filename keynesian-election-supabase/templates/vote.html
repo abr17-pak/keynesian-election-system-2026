@@ -14,18 +14,27 @@
 
 <p class="eyebrow">Official ballot</p>
 <h1>School Elections</h1>
-<p class="lead">Select one candidate per position, then submit your vote. You can only vote once.</p>
+<p class="lead">Select a candidate for each position, then submit your vote. You can only vote once.</p>
 
-<form method="POST">
+<form method="POST" id="ballot-form">
 
     {% for position in positions %}
-    <div class="ballot-position">
+    <div class="ballot-position" {% if position.max_selections > 1 %}data-max="{{ position.max_selections }}"{% endif %}>
 
-        <h2>{{ position.name }}</h2>
+        <h2>
+            {{ position.name }}
+            {% if position.max_selections > 1 %}
+            <span class="ballot-hint">Pick up to {{ position.max_selections }} — <span class="ballot-count">0</span>/{{ position.max_selections }} selected</span>
+            {% endif %}
+        </h2>
 
         {% for candidate in position.candidates %}
         <label class="ballot-option" for="c-{{ candidate.id }}">
+            {% if position.max_selections > 1 %}
+            <input type="checkbox" id="c-{{ candidate.id }}" name="{{ position.id }}" value="{{ candidate.id }}">
+            {% else %}
             <input type="radio" id="c-{{ candidate.id }}" name="{{ position.id }}" value="{{ candidate.id }}" required>
+            {% endif %}
             <span>{{ candidate.name }}</span>
         </label>
         {% endfor %}
@@ -36,5 +45,41 @@
     <button type="submit">Submit Vote</button>
 
 </form>
+
+<script>
+document.querySelectorAll('.ballot-position[data-max]').forEach(function (group) {
+    var max = parseInt(group.dataset.max, 10);
+    var boxes = group.querySelectorAll('input[type="checkbox"]');
+    var counter = group.querySelector('.ballot-count');
+
+    function refresh() {
+        var checked = group.querySelectorAll('input[type="checkbox"]:checked').length;
+        if (counter) counter.textContent = checked;
+        boxes.forEach(function (box) {
+            box.disabled = !box.checked && checked >= max;
+        });
+    }
+
+    boxes.forEach(function (box) {
+        box.addEventListener('change', refresh);
+    });
+});
+
+document.getElementById('ballot-form').addEventListener('submit', function (e) {
+    var groups = document.querySelectorAll('.ballot-position');
+    for (var i = 0; i < groups.length; i++) {
+        var group = groups[i];
+        var boxes = group.querySelectorAll('input[type="checkbox"], input[type="radio"]');
+        if (boxes.length === 0) continue;
+        var checked = group.querySelectorAll('input:checked').length;
+        if (checked === 0) {
+            e.preventDefault();
+            var heading = group.querySelector('h2');
+            alert('Please select at least one candidate for ' + (heading ? heading.textContent.trim() : 'each position') + '.');
+            return;
+        }
+    }
+});
+</script>
 
 {% endblock %}
