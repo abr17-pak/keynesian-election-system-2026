@@ -124,6 +124,10 @@ class Position(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
 
+    # How many candidates a voter may select for this position.
+    # 1 = normal single-choice position, 4 = "pick up to 4" position, etc.
+    max_selections = db.Column(db.Integer, nullable=False, default=1)
+
     candidates = db.relationship(
         "Candidate",
         backref="position",
