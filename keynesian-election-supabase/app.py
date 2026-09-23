@@ -206,6 +206,8 @@ def positions():
         "positions.html",
         positions=all_positions
     )
+
+
 @app.route("/delete_position/<int:id>", methods=["POST"])
 def delete_position(id):
 
