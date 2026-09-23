@@ -13,12 +13,18 @@
 <div class="card">
     <h2>Add Position</h2>
 
-    <form method="POST" class="form-inline" style="margin-top:14px;">
+       <form method="POST" class="form-inline" style="margin-top:14px;">
         <div class="form-row" style="margin-bottom:0;">
             <input type="text" name="position_name" placeholder="e.g. Head Boy" required>
         </div>
+        <div class="form-row" style="margin-bottom:0;">
+            <input type="number" name="max_selections" min="1" value="1" style="width:90px;" title="How many candidates a voter can pick for this position">
+        </div>
         <button type="submit">Add Position</button>
     </form>
+    <p style="color:var(--ink-400); font-size:13px; margin-top:8px;">
+        "Candidates to pick" is 1 for a normal single-choice position, or higher (e.g. 4) to let voters select multiple candidates for that position.
+    </p>
 </div>
 
 <div class="card" style="padding-top:20px;">
