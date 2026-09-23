@@ -21,7 +21,6 @@
     {% for position in positions %}
     <div class="ballot-position" {% if position.max_selections > 1 %}data-max="{{ position.max_selections }}"{% endif %}>
 
-          <h2>{{ position.name }}</h2>
         <h2>
             {{ position.name }}
             {% if position.max_selections > 1 %}
@@ -48,6 +47,7 @@
 </form>
 
 <script>
+// Caps checkbox groups at each position's max_selections and shows a live count.
 document.querySelectorAll('.ballot-position[data-max]').forEach(function (group) {
     var max = parseInt(group.dataset.max, 10);
     var boxes = group.querySelectorAll('input[type="checkbox"]');
