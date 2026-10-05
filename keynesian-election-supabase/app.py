@@ -1,4 +1,6 @@
 import os
+import hmac
+from functools import wraps
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
@@ -8,7 +10,32 @@ load_dotenv()
 
 # Create Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "school_voting_secret_key")
+
+# -----------------------------
+# Security settings
+# -----------------------------
+# On Vercel these MUST be set as Environment Variables (the app refuses to
+# start without them, so a public default can never be used in production).
+# On your own computer a harmless local default is used instead.
+IS_VERCEL = bool(os.environ.get("VERCEL"))
+
+
+def require_env(name, local_default):
+    value = os.environ.get(name)
+    if value:
+        return value
+    if IS_VERCEL:
+        raise RuntimeError(f"{name} environment variable must be set on Vercel.")
+    return local_default
+
+
+app.secret_key = require_env("SECRET_KEY", "local-dev-only-secret-key")
+ADMIN_USERNAME = require_env("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = require_env("ADMIN_PASSWORD", "1234")
+
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"      # blocks cross-site form posts
+app.config["SESSION_COOKIE_SECURE"] = IS_VERCEL    # HTTPS-only cookie in production
 
 # -----------------------------
 # Database configuration
@@ -28,6 +55,42 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Initialize database
 db = SQLAlchemy(app)
+
+# -----------------------------
+# Login guards
+# -----------------------------
+
+def safe_equal(a, b):
+    """Constant-time string comparison."""
+    return hmac.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
+
+
+def admin_required(view):
+    """Only a logged-in administrator may open this page."""
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        if not session.get("is_admin"):
+            return redirect(url_for("admin"))
+        return view(*args, **kwargs)
+    return wrapper
+
+
+def student_required(view):
+    """Only a logged-in student may open this page."""
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        if not session.get("student_id"):
+            return redirect(url_for("login"))
+        return view(*args, **kwargs)
+    return wrapper
+
+
+@app.after_request
+def no_cache(response):
+    # Stops the browser Back button from showing protected pages after logout
+    if request.endpoint != "static":
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 # -----------------------------
 # Database Tables
@@ -51,21 +114,33 @@ def home():
 @app.route("/admin", methods=["GET", "POST"])
 def admin():
 
+    if session.get("is_admin"):
+        return redirect(url_for("dashboard"))
+
     if request.method == "POST":
 
         username = request.form["username"]
         password = request.form["password"]
 
-        if username == "admin" and password == "1234":
+        if safe_equal(username, ADMIN_USERNAME) and safe_equal(password, ADMIN_PASSWORD):
+            session.clear()
+            session["is_admin"] = True
             return redirect(url_for("dashboard"))
 
         else:
-            return "Invalid Username or Password"
+            return "Invalid Username or Password", 401
 
     return render_template("admin_login.html")
 
 
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("home"))
+
+
 @app.route("/dashboard")
+@admin_required
 def dashboard():
 
     student_count = Student.query.count()
@@ -86,6 +161,7 @@ def dashboard():
 
 
 @app.route("/students", methods=["GET", "POST"])
+@admin_required
 def students():
 
     if request.method == "POST":
@@ -124,10 +200,6 @@ class Position(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
 
-    # How many candidates a voter may select for this position.
-    # 1 = normal single-choice position, 4 = "pick up to 4" position, etc.
-    max_selections = db.Column(db.Integer, nullable=False, default=1)
-
     candidates = db.relationship(
         "Candidate",
         backref="position",
@@ -151,6 +223,7 @@ class Candidate(db.Model):
 
 
 @app.route("/candidates", methods=["GET", "POST"])
+@admin_required
 def candidates():
 
     if request.method == "POST":
@@ -181,21 +254,14 @@ def candidates():
 
 
 @app.route("/positions", methods=["GET", "POST"])
+@admin_required
 def positions():
 
     if request.method == "POST":
 
         position_name = request.form["position_name"]
 
-        # "Max selections" defaults to 1 (normal single-choice position)
-        # if the field is left blank or isn't a valid number.
-        try:
-            max_selections = int(request.form.get("max_selections", 1))
-        except ValueError:
-            max_selections = 1
-        max_selections = max(1, max_selections)
-
-        position = Position(name=position_name, max_selections=max_selections)
+        position = Position(name=position_name)
 
         db.session.add(position)
         db.session.commit()
@@ -209,24 +275,8 @@ def positions():
         positions=all_positions
     )
 
-
-@app.route("/update_position/<int:id>", methods=["POST"])
-def update_position(id):
-
-    position = Position.query.get_or_404(id)
-
-    try:
-        max_selections = int(request.form.get("max_selections", 1))
-    except ValueError:
-        max_selections = 1
-
-    position.max_selections = max(1, max_selections)
-
-    db.session.commit()
-
-    return redirect(url_for("positions"))
-
 @app.route("/delete_position/<int:id>", methods=["POST"])
+@admin_required
 def delete_position(id):
 
     position = Position.query.get_or_404(id)
@@ -237,6 +287,7 @@ def delete_position(id):
     return redirect(url_for("positions"))
 
 @app.route("/delete_candidate/<int:id>", methods=["POST"])
+@admin_required
 def delete_candidate(id):
 
     candidate = Candidate.query.get_or_404(id)
@@ -248,6 +299,7 @@ def delete_candidate(id):
 
 
 @app.route("/delete_student/<int:id>", methods=["POST"])
+@admin_required
 def delete_student(id):
 
     student = Student.query.get_or_404(id)
@@ -258,6 +310,7 @@ def delete_student(id):
     return redirect(url_for("students"))
 
 @app.route("/upload_students", methods=["POST"])
+@admin_required
 def upload_students():
 
     file = request.files["excel_file"]
@@ -286,10 +339,12 @@ def upload_students():
     return redirect(url_for("students"))
 
 @app.route("/setup")
+@admin_required
 def setup():
     return render_template("setup.html")
 
 @app.route("/sample")
+@admin_required
 def sample():
 
     if Position.query.count() == 0:
@@ -326,6 +381,7 @@ def login():
             if student.has_voted:
                 return "You have already voted."
 
+            session.clear()
             session["student_id"] = student.id
             return redirect(url_for("vote"))
 
@@ -336,38 +392,70 @@ def login():
 
 
 @app.route("/vote", methods=["GET", "POST"])
+@student_required
 def vote():
 
-    positions = Position.query.all()
+    student = Student.query.get(session["student_id"])
+
+    # Student was deleted, or already voted -> end the session
+    if student is None:
+        session.clear()
+        return redirect(url_for("login"))
+
+    if student.has_voted:
+        session.clear()
+        return "You have already voted."
 
     if request.method == "POST":
 
-        # For each position, read every checked candidate (getlist handles
-        # both a single radio value and multiple checkbox values).
-        for position in positions:
+        # 1. Check every choice is a real candidate for that position
+        chosen = []
 
-            candidate_ids = request.form.getlist(str(position.id))
+        for position_id, candidate_id in request.form.items():
 
-            if len(candidate_ids) == 0:
-                return f"Please select at least one candidate for {position.name}."
+            try:
+                position_id = int(position_id)
+                candidate_id = int(candidate_id)
+            except ValueError:
+                return "Invalid ballot.", 400
 
-            if len(candidate_ids) > position.max_selections:
-                return (
-                    f"You selected too many candidates for {position.name}. "
-                    f"You may choose up to {position.max_selections}."
-                )
+            candidate = Candidate.query.get(candidate_id)
 
-            for candidate_id in candidate_ids:
-                candidate = Candidate.query.get(int(candidate_id))
-                if candidate and candidate.position_id == position.id:
-                    candidate.votes += 1
+            if candidate is None or candidate.position_id != position_id:
+                return "Invalid ballot.", 400
 
-        student = Student.query.get(session["student_id"])
-        student.has_voted = True
+            chosen.append(candidate_id)
+
+        if not chosen:
+            return "Invalid ballot.", 400
+
+        # 2. Claim the vote first. This only succeeds once per student,
+        #    even if the form is submitted twice at the same moment.
+        claimed = Student.query.filter_by(
+            id=student.id,
+            has_voted=False
+        ).update({"has_voted": True}, synchronize_session=False)
+
+        if claimed != 1:
+            db.session.rollback()
+            session.clear()
+            return "You have already voted."
+
+        # 3. Count the votes
+        for candidate_id in chosen:
+            Candidate.query.filter_by(id=candidate_id).update(
+                {"votes": Candidate.votes + 1},
+                synchronize_session=False
+            )
 
         db.session.commit()
 
+        # Voting is finished, so log the student out
+        session.clear()
+
         return redirect(url_for("success"))
+
+    positions = Position.query.all()
 
     return render_template(
         "vote.html",
@@ -376,6 +464,7 @@ def vote():
 
 
 @app.route("/results")
+@admin_required
 def results():
 
     positions = Position.query.all()
@@ -406,6 +495,7 @@ def results():
     )
 
 @app.route("/reset_election", methods=["POST"])
+@admin_required
 def reset_election():
 
     # Reset all candidates' votes
@@ -432,17 +522,7 @@ def success():
 # -----------------------------
 # Run the App
 # -----------------------------
-@app.route("/test")
-def test():
-    student = Student(
-        name="Amber",
-        student_class="A2"
-    )
 
-    db.session.add(student)
-    db.session.commit()
-
-    return "Student Added!"
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
