@@ -166,12 +166,8 @@ def students():
 
     if request.method == "POST":
 
-        print("Form Submitted!")
-
         name = request.form["name"]
         student_class = request.form["student_class"]
-
-        print(name, student_class)
 
         new_student = Student(
             name=name,
@@ -180,8 +176,6 @@ def students():
 
         db.session.add(new_student)
         db.session.commit()
-
-        print("Student Saved!")
 
         return redirect(url_for("students"))
 
@@ -199,6 +193,10 @@ def students():
 class Position(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+
+    # How many candidates a voter may select for this position.
+    # 1 = normal single-choice position, 4 = "pick up to 4" position, etc.
+    max_selections = db.Column(db.Integer, nullable=False, default=1)
 
     candidates = db.relationship(
         "Candidate",
@@ -261,7 +259,15 @@ def positions():
 
         position_name = request.form["position_name"]
 
-        position = Position(name=position_name)
+        # "Max selections" defaults to 1 (normal single-choice position)
+        # if the field is left blank or isn't a valid number.
+        try:
+            max_selections = int(request.form.get("max_selections", 1))
+        except ValueError:
+            max_selections = 1
+        max_selections = max(1, max_selections)
+
+        position = Position(name=position_name, max_selections=max_selections)
 
         db.session.add(position)
         db.session.commit()
@@ -274,6 +280,24 @@ def positions():
         "positions.html",
         positions=all_positions
     )
+
+
+@app.route("/update_position/<int:id>", methods=["POST"])
+@admin_required
+def update_position(id):
+
+    position = Position.query.get_or_404(id)
+
+    try:
+        max_selections = int(request.form.get("max_selections", 1))
+    except ValueError:
+        max_selections = 1
+
+    position.max_selections = max(1, max_selections)
+
+    db.session.commit()
+
+    return redirect(url_for("positions"))
 
 @app.route("/delete_position/<int:id>", methods=["POST"])
 @admin_required
@@ -397,7 +421,7 @@ def vote():
 
     student = Student.query.get(session["student_id"])
 
-    # Student was deleted, or already voted -> end the session
+    # Student was deleted, or has already voted -> end the session
     if student is None:
         session.clear()
         return redirect(url_for("login"))
@@ -406,28 +430,40 @@ def vote():
         session.clear()
         return "You have already voted."
 
+    positions = Position.query.all()
+
     if request.method == "POST":
 
-        # 1. Check every choice is a real candidate for that position
+        # 1. Check the whole ballot first (nothing is counted yet).
+        #    getlist handles both a single radio value and many checkbox values.
         chosen = []
 
-        for position_id, candidate_id in request.form.items():
+        for position in positions:
 
-            try:
-                position_id = int(position_id)
-                candidate_id = int(candidate_id)
-            except ValueError:
-                return "Invalid ballot.", 400
+            candidate_ids = request.form.getlist(str(position.id))
 
-            candidate = Candidate.query.get(candidate_id)
+            if len(candidate_ids) == 0:
+                return f"Please select at least one candidate for {position.name}."
 
-            if candidate is None or candidate.position_id != position_id:
-                return "Invalid ballot.", 400
+            if len(candidate_ids) > position.max_selections:
+                return (
+                    f"You selected too many candidates for {position.name}. "
+                    f"You may choose up to {position.max_selections}."
+                )
 
-            chosen.append(candidate_id)
+            valid_ids = {c.id for c in position.candidates}
 
-        if not chosen:
-            return "Invalid ballot.", 400
+            for candidate_id in candidate_ids:
+                try:
+                    candidate_id = int(candidate_id)
+                except ValueError:
+                    return "Invalid ballot.", 400
+
+                if candidate_id not in valid_ids:
+                    return "Invalid ballot.", 400
+
+            # set() so the same candidate can't be counted twice
+            chosen.extend(set(int(c) for c in candidate_ids))
 
         # 2. Claim the vote first. This only succeeds once per student,
         #    even if the form is submitted twice at the same moment.
@@ -454,8 +490,6 @@ def vote():
         session.clear()
 
         return redirect(url_for("success"))
-
-    positions = Position.query.all()
 
     return render_template(
         "vote.html",
@@ -522,7 +556,6 @@ def success():
 # -----------------------------
 # Run the App
 # -----------------------------
-
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
