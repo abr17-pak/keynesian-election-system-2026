@@ -333,6 +333,19 @@ def delete_student(id):
 
     return redirect(url_for("students"))
 
+@app.route("/delete_all_students", methods=["POST"])
+@admin_required
+def delete_all_students():
+
+    # The form must send the word DELETE, so a stray request can't wipe the list
+    if request.form.get("confirm") != "DELETE":
+        return redirect(url_for("students"))
+
+    Student.query.delete()
+    db.session.commit()
+
+    return redirect(url_for("students"))
+
 @app.route("/upload_students", methods=["POST"])
 @admin_required
 def upload_students():
